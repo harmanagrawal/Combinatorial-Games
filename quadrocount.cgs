@@ -1,0 +1,71 @@
+/*
+ * quadrocount.cgs
+ *
+ * Created by Harman Agrawal on Aug 16, 2024
+ */
+
+singleton class Quadrocount_1 extends game.grid.GridRuleset
+  class Position(grid as Grid) extends GridGame
+    override def Options(player as Player) begin
+      var us := player.Ordinal;
+      var them := player.Opponent.Ordinal;
+
+      var totalScore := 0;
+      var rowDiff := 0;
+      var colDiff := 0;
+      var area := 0;
+      var score := 0;
+      var newGrid := grid;
+      var rowCount := grid.RowCount;
+      var colCount := grid.ColCount;
+      var positions := Strip.Empty(2);
+      var counter := 1;
+
+      for coord_us in (grid FindAll us)
+      for coord_them in (grid FindAll them)
+      yield
+        rowDiff := [coord_us.Row, coord_them.Row].Max - [coord_us.Row, coord_them.Row].Min;
+        colDiff := [coord_us.Col, coord_them.Col].Max - [coord_us.Col, coord_them.Col].Min;
+        area := (rowDiff + 1) * (colDiff + 1);
+        totalScore := totalScore + area;
+      end
+
+      for currentPlayer in (newGrid FindAll us)
+      yield
+        var tallyGrid := Grid.Empty(rowCount, colCount);
+        for m from 1 to rowCount
+        for n from 1 to colCount
+        where grid[(m,n)] == 0
+        yield
+          score := 0;
+          newGrid := newGrid.Updated({(currentPlayer.Row, currentPlayer.Col) => 0, (m,n) => us});
+          for coord_us in (newGrid FindAll us)
+          for coord_them in (newGrid FindAll them)
+          yield
+            rowDiff := [coord_us.Row, coord_them.Row].Max - [coord_us.Row, coord_them.Row].Min;
+            colDiff := [coord_us.Col, coord_them.Col].Max - [coord_us.Col, coord_them.Col].Min;
+            area := (rowDiff + 1) * (colDiff + 1);
+            score := score + area;
+          end
+          newGrid := grid;
+          if (score < totalScore) then
+            tallyGrid := tallyGrid.Updated({(m,n) => 10});
+          end
+        end
+
+        positions[counter] :=
+          for m from 1 to rowCount
+          for n from 1 to colCount
+          where tallyGrid[(m,n)] == 10
+          yield
+            Position(grid Updated {(currentPlayer.Row, currentPlayer.Col) => 0, (m,n) => us})
+          end
+
+        counter := 2;
+      end
+      positions[1] Concat positions[2]
+    end
+  end
+  override def CharMap := ".xo";
+  override def Icons := [Icon.Blank, Icon.BlackStone, Icon.WhiteStone];
+end
